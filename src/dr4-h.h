@@ -55,6 +55,29 @@ static const unsigned char DR4H_MAGIC[3] = {83, 94, 121};
 // Pad of 4 0 bytes that are meant to provide a safety cap on a series of rows.
 static const unsigned char DR4H_FILE_END[4] = {0, 0, 0, 0};
 
+/**** Static String Representations *******/
+static const char* DR4H_STR_TYPE_NONE = "None";
+static const char* DR4H_STR_TYPE_TRUE = "True";
+static const char* DR4H_STR_TYPE_FALSE = "False";
+
+/*****************************************/
+
+
+/******Pointer Manipulation Macros **********/
+// Macro that evaluates to the size of the current row pointed to.
+#define DR4H_ROWP_SIZE(data) (*(uint32_t*)(data))
+// Macro that derefences to the number of fields in the current row.
+#define DR4H_ROWP_LEN(data) (*(uint32_t*)(data + 4))
+// Macro that evaluates to a pointer to the index -> offsets array of the row.
+#define DR4H_ROWP_INDEXES(data) ((uint32_t*)(data + 8))
+/* getitem[] macro for rows
+ * Evaluates to the field at some offset from the row header, at an index.
+ * |size|len|indexes...|f0|f1...|fn|STOP
+ */
+#define DR4H_ROWP_ITEM_AT(data, ind) ((unsigned char*)(data + 8 + (4 * DR4H_ROWP_LEN(data)) + (DR4H_ROWP_INDEXES(data)[ind]) ))
+// Macro that moves the row pointer up by one row
+#define DR4H_ROWP_INC(data)  data += DR4H_ROWP_SIZE(data)
+
 /****Util Functions******/
 
 /* @brief Fast inline function to get size of file
@@ -112,6 +135,46 @@ __safe_append_bytes(void** data,
 }
 
 /***************************/
+
+/**
+ * Writes string-based debug information to the FILE
+ * fp about row.
+ * Details the size, length, offsets, and items.
+ */
+static void
+_dr4h_row_debug_info(FILE* fp, void* row)
+{
+	uint32_t j;
+	uint32_t row_len = *(uint32_t*)(row + 4);
+	uint32_t row_header_size = 8 + (row_len * 4);
+	unsigned char* cur_item;
+	fprintf(fp, "----Debug info for Row at (%p)----\n", row);
+	fprintf(fp, "Row Size: %u\n", *(uint32_t*)row);
+	fprintf(fp, "Row Length: %u\n", *(uint32_t*)(row + 4));
+	fputs("_____Row index offsets and items______", fp);
+	for(j=0; j < (*(uint32_t*)(row + 4)) ; j++)
+	{
+		fputs("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~", fp);
+		fprintf(fp, "offset: %u -> [%u]\n", j, ((uint32_t*)(row + 8))[j]);
+		fprintf(fp, "item: ");
+		cur_item = (unsigned char*)(row + row_header_size + ((uint32_t*)(row + 8))[j]);
+		switch(*cur_item)
+		{
+			case DR4H_TYPE_NONE:
+			     fprintf(fp, "%s\n", DR4H_STR_TYPE_NONE);
+			     break;
+			case DR4H_TYPE_BOOL:
+			     fprintf(fp, "Bool, - Data: %u\n", cur_item[1]);
+			     break;
+			default:
+			     fprintf(fp, "Unknown, - Mark %u, - Data: %u\n", cur_item[0], cur_item[1]);
+		}
+	}
+	fputs("----------------------------------", fp);
+}
+
+// Conveinece macro alias that directs a row debug to stderr.
+#define dr4h_debug_row_e(row) _dr4h_row_debug_info(stderr, row)
 
 /**
  * Special sizing function that calculates the memory needed for a row of some field arrangement.
@@ -193,7 +256,7 @@ _dr4h_row_write_fmt(void* buf, const char* fmt, ...)
 	va_start(fmt_arg_lst, fmt);
     while(*fmt)
     {
-    	*offsets = buf - body_begin;
+    	*offsets++ = buf - body_begin;
     	switch(*fmt)
     	{
     		case 'n':
@@ -240,46 +303,70 @@ _dr4h_read_row(void* dst, void* rows)
 	return bytes_read;
 }
 
-// Macro that evaluates to the size of the current row pointed to.
-#define DR4H_ROWP_SIZE(row) (*(uint32_t*)(row->data))
-// Macro that derefences to the number of fields in the current row.
-#define DR4H_ROWP_LEN(row) (*(uint32_t*)(row->data + 4))
-// Macro that evaluates to a pointer to the index -> offsets array of the row.
-#define DR4H_ROWP_INDEXES(row) ((uint32_t*)(row->data + 8))
-/* getitem[] macro for rows
- * Evaluates to the field at some offset from the row header, at an index.
- * |size|len|indexes...|f0|f1...|fn|STOP
+/* Reads multiple rows up until size is 0.
+ * If there is an unmet boundary, the function returns 0
+ * and does not copy that row.
  */
-#define DR4H_ROWP_ITEM_AT(row, ind) ((unsigned char*) (row->data + DR4H_ROW_INDEXES(row)[ind]))
-// Macro that moves the row pointer up by one row
-// This macro also stores the size of the last row,
-// such that the previous row can be back referenced.
-#define DR4H_ROWP_INC(row) \
-               row->last = DR4H_ROWP_SIZE(row); \
-               row->data += DR4H_ROWP_SIZE(row)
-// Inits a row ptr to get setup for reading/writing on a binary array.
-#define DR4H_ROWP_INIT(row, ptr) \
-               row->data = ptr; \
-               row->last = 0
-
-// Macro that references previous row
-// Defaults to NULL if last is zero.
-#define DR4H_ROWP_PREV(row) ( row->last != 0 ? (row->data - row->last) : NULL )
-
-/**
- * A struct representing a pointer to a formatted row of binary data.
- * This row references binary data stored by it's pointer via offsets.
- * The first offset is a uint32 of the entire size of the row, including
- * the stop byte. byte 0-3
- * The second offset is at 4-7, a uint32 of the total number of items in the row.
- * This is type is meant to be used privately, to aid in reading and writing dr4 format
- *     
- */
-struct dr4h_row_ptr_t
+static int
+_dr4h_read_rows(void* dst, void* rows, size_t size)
 {
-	void* data;
-	uint32_t last;
-};   
+	uint32_t cur_row;
+	int result = 1;
+	while(size)
+	{
+		cur_row = *(uint32_t*)rows;
+		if(cur_row > size) {
+			result = 0;
+			break;
+		}
+		memcpy(dst, rows, cur_row);
+		dst += cur_row;
+		rows += cur_row;
+		size -= cur_row;
+	}
+	return result;
+}
+// Macro alias to private read function
+#define dr4h_read_r _dr4h_read_rows
+
+/* Reads the contents of row into dst as a stringified
+ * version, which closely follows csv format.
+ * The data will be separated by the delim char.
+ */
+static unsigned
+_dr4h_read_row_str(char* dst, void* row, char delim)
+{
+	unsigned char* cur_item;
+	uint32_t i;
+	int advance;
+	const char* dst_start = dst;
+	uint32_t row_len = DR4H_ROWP_LEN(row);
+	for(i = 0; i < row_len; i++)
+	{
+		cur_item = (unsigned char*)(row + 8 + (row_len * 4) + DR4H_ROWP_INDEXES(row)[i]);
+		switch(*cur_item)
+		{
+			case DR4H_TYPE_NONE:
+			   advance = sprintf(dst, "%s", DR4H_STR_TYPE_NONE);
+			   dst += advance;
+			   break;
+			case DR4H_TYPE_BOOL:
+			   advance = sprintf(dst, "%s", (cur_item[1] ? DR4H_STR_TYPE_TRUE : DR4H_STR_TYPE_FALSE));
+			   dst += advance;
+			   break;
+			default:
+			   fprintf(stderr, "Error: Unknown type byte '%u' in _dr4h_read_row_str\n", *cur_item);
+			   return 0;
+		}
+		if(i % 2 == 0) *dst++ = delim;
+	}
+	*dst++ = '\n';
+	*dst++ = '\0';
+	return dst - dst_start;
+}
+
+
+
 
 
 

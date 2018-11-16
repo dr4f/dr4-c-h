@@ -5,3 +5,6 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 
 add_executable(test_fmt test_fmt.c)
 add_test(test_fmt test_fmt)
+
+add_executable(test_read test_read.c)
+add_test(test_read test_read)

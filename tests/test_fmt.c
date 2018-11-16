@@ -20,6 +20,7 @@ static void test_dr4h_row_write_fmt_1(void)
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr) == 15); // size, len, 1 index, 1 bool, stop
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr + sizeof(uint32_t)) == 1); // 1 item
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr + 8) == 0);
+	TEST_FAIL_CHECK(*(unsigned char*)(check_ptr + 13) == 1); // bool is true
 }
 
 /* Tests the macro alias to the private function
@@ -40,7 +41,7 @@ static void test_dr4h_row_write_fmt_return(void)
 	const char* fmt_test = "bb";
 	unsigned char bytes[40];
 	void* check_ptr = bytes;
-	unsigned worked = dr4h_write_row_fmt(bytes, fmt_test, 1);
+	unsigned worked = dr4h_write_row_fmt(bytes, fmt_test, 1, 1);
 	TEST_FAIL_CHECK(worked == 21);
 }
 
