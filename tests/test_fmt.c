@@ -15,7 +15,7 @@ static void test_dr4h_row_write_fmt_1(void)
 {
 	const char* fmt_test = "b";
 	unsigned char bytes[100];
-	int worked = _dr4h_row_write_fmt(bytes, fmt_test, 1);
+	unsigned worked = _dr4h_row_write_fmt(bytes, fmt_test, 1);
 	void* check_ptr = bytes;
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr) == 15); // size, len, 1 index, 1 bool, stop
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr + sizeof(uint32_t)) == 1); // 1 item
@@ -30,9 +30,18 @@ static void test_dr4h_row_write_fmt_2(void)
 	const char* fmt_test = "b";
 	unsigned char bytes[20];
 	void* check_ptr = bytes;
-	int worked = dr4h_write_row_fmt(bytes, fmt_test, 1);
+	unsigned worked = dr4h_write_row_fmt(bytes, fmt_test, 1);
 	TEST_FAIL_CHECK(worked);
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr) == 15);
+}
+
+static void test_dr4h_row_write_fmt_return(void)
+{
+	const char* fmt_test = "bb";
+	unsigned char bytes[40];
+	void* check_ptr = bytes;
+	unsigned worked = dr4h_write_row_fmt(bytes, fmt_test, 1);
+	TEST_FAIL_CHECK(worked == 21);
 }
 
 int main(int argc, char const *argv[])
@@ -40,6 +49,7 @@ int main(int argc, char const *argv[])
 	test_dr4h_calc_size_fmt();
 	test_dr4h_row_write_fmt_1();
 	test_dr4h_row_write_fmt_2();
+	test_dr4h_row_write_fmt_return();
 	TEST_FAIL_RETURN
 	return 0;
 }

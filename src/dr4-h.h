@@ -160,16 +160,17 @@ _dr4h_calc_size_fmt(const char* fmt, uint32_t* length)
  * Then the array of int's represents the offsets of each field in
  *    the row body.
  *
- * Returns 1 if success, 0 otherwise
+ * Returns number of bytes written if success, 0 otherwise
  * NOTE: This function always writes a stop byte at the end of a row.
  */
-static int
+static unsigned
 _dr4h_row_write_fmt(void* buf, const char* fmt, ...)
 {
 	int grab_int;
 	uint32_t* offsets;
 	void* body_begin;
 	va_list fmt_arg_lst;
+	void* byte_start = buf;
 	uint32_t row_len = 0;
 	size_t row_size = _dr4h_calc_size_fmt(fmt, &row_len);
 	uint32_t offset_i = 0;
@@ -213,7 +214,7 @@ _dr4h_row_write_fmt(void* buf, const char* fmt, ...)
     }
     *(unsigned char*)(buf++) = DR4H_TYPE_STOP;
 	va_end(fmt_arg_lst);
-	return 1;
+	return buf - byte_start;
 }
 // Allows function to be used with public name.
 #define dr4h_write_row_fmt _dr4h_row_write_fmt
