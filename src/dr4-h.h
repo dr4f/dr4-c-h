@@ -151,10 +151,10 @@ _dr4h_row_debug_info(FILE* fp, void* row)
 	fprintf(fp, "----Debug info for Row at (%p)----\n", row);
 	fprintf(fp, "Row Size: %u\n", *(uint32_t*)row);
 	fprintf(fp, "Row Length: %u\n", *(uint32_t*)(row + 4));
-	fputs("_____Row index offsets and items______", fp);
+	fputs("_____Row index offsets and items______\n", fp);
 	for(j=0; j < (*(uint32_t*)(row + 4)) ; j++)
 	{
-		fputs("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~", fp);
+		fputs("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n", fp);
 		fprintf(fp, "offset: %u -> [%u]\n", j, ((uint32_t*)(row + 8))[j]);
 		fprintf(fp, "item: ");
 		cur_item = (unsigned char*)(row + row_header_size + ((uint32_t*)(row + 8))[j]);
@@ -170,7 +170,7 @@ _dr4h_row_debug_info(FILE* fp, void* row)
 			     fprintf(fp, "Unknown, - Mark %u, - Data: %u\n", cur_item[0], cur_item[1]);
 		}
 	}
-	fputs("----------------------------------", fp);
+	fputs("----------------------------------\n", fp);
 }
 
 // Conveinece macro alias that directs a row debug to stderr.
@@ -358,7 +358,7 @@ _dr4h_read_row_str(char* dst, void* row, char delim)
 			   fprintf(stderr, "Error: Unknown type byte '%u' in _dr4h_read_row_str\n", *cur_item);
 			   return 0;
 		}
-		if(i % 2 == 0) *dst++ = delim;
+		if(i != row_len - 1) *dst++ = delim;
 	}
 	*dst++ = '\n';
 	*dst++ = '\0';
