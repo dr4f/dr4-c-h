@@ -229,7 +229,16 @@ _dr4h_file_write_magic(FILE* fp)
 	return 3 == fwrite(DR4H_MAGIC, 1, 3, fp);
 }
 
-
+/* Fast function that reads one row from rows
+ * and returns the number of bytes read.
+ */
+static inline uint32_t
+_dr4h_read_row(void* dst, void* rows)
+{
+	uint32_t bytes_read = *(uint32_t*)rows;
+	memcpy(dst, rows, bytes_read);
+	return bytes_read;
+}
 
 // Macro that evaluates to the size of the current row pointed to.
 #define DR4H_ROWP_SIZE(row) (*(uint32_t*)(row->data))
