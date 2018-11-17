@@ -36,6 +36,7 @@ static void test_dr4h_row_write_fmt_2(void)
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr) == 15);
 }
 
+
 static void test_dr4h_row_write_fmt_return(void)
 {
 	const char* fmt_test = "bb";

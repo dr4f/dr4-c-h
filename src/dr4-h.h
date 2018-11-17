@@ -332,6 +332,7 @@ _dr4h_read_rows(void* dst, void* rows, size_t size)
 /* Reads the contents of row into dst as a stringified
  * version, which closely follows csv format.
  * The data will be separated by the delim char.
+ * Intended to show a csv-like representation.
  */
 static unsigned
 _dr4h_read_row_str(char* dst, void* row, char delim)
@@ -343,7 +344,7 @@ _dr4h_read_row_str(char* dst, void* row, char delim)
 	uint32_t row_len = DR4H_ROWP_LEN(row);
 	for(i = 0; i < row_len; i++)
 	{
-		cur_item = (unsigned char*)(row + 8 + (row_len * 4) + DR4H_ROWP_INDEXES(row)[i]);
+		cur_item = DR4H_ROWP_ITEM_AT(row, i);
 		switch(*cur_item)
 		{
 			case DR4H_TYPE_NONE:
@@ -366,6 +367,33 @@ _dr4h_read_row_str(char* dst, void* row, char delim)
 }
 
 
+/* Counts the number of rows in rows, up to size
+ *    of bytes.
+ */
+static unsigned
+_dr4h_count_rows(void* rows, size_t size)
+{
+	uint32_t cur_size;
+	unsigned count = 0;
+	while(size)
+	{
+		cur_size = *(uint32_t*)rows;
+		// End of rows reached, valid condition.
+		if(!cur_size) return count;
+		if(cur_size > size)
+		{
+			fprintf(stderr, "Error: Out of bounds reached in _dr4h_count_rows\n");
+			return 0;
+		}
+		else
+		{
+			count++;
+			size -= cur_size;
+			rows += cur_size;
+		}
+	}
+	return count;
+}
 
 
 
