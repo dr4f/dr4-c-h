@@ -23,6 +23,7 @@ extern "C" {
 #define DR4H_TYPE_STOP 0
 #define DR4H_TYPE_NONE 1
 #define DR4H_TYPE_BOOL 2
+#define DR4H_TYPE_WILD 3
 
 /***********************/
 
@@ -59,6 +60,7 @@ static const unsigned char DR4H_FILE_END[4] = {0, 0, 0, 0};
 static const char* DR4H_STR_TYPE_NONE = "None";
 static const char* DR4H_STR_TYPE_TRUE = "True";
 static const char* DR4H_STR_TYPE_FALSE = "False";
+static const char* DR4H_STR_TYPE_WILD = "*";
 
 /*****************************************/
 
@@ -166,6 +168,9 @@ _dr4h_row_debug_info(FILE* fp, void* row)
 			case DR4H_TYPE_BOOL:
 			     fprintf(fp, "Bool, - Data: %u\n", cur_item[1]);
 			     break;
+			case DR4H_TYPE_WILD:
+			     fprintf(fp, "WildCard - %s\n", DR4H_STR_TYPE_WILD);
+			     break;
 			default:
 			     fprintf(fp, "Unknown, - Mark %u, - Data: %u\n", cur_item[0], cur_item[1]);
 		}
@@ -197,6 +202,7 @@ _dr4h_calc_size_fmt(const char* fmt, uint32_t* length)
 		switch(*fmt)
 		{
 			case 'n':
+			case '*':
 			   total++;
 			   break;
 			case 'b':
@@ -261,6 +267,10 @@ _dr4h_row_write_fmt(void* buf, const char* fmt, ...)
     	{
     		case 'n':
     		    *(unsigned char*)buf = DR4H_TYPE_NONE;
+    		    buf++;
+    		    break;
+    		case '*':
+    		    *(unsigned char*)buf = DR4H_TYPE_WILD;
     		    buf++;
     		    break;
     		case 'b':
@@ -353,6 +363,10 @@ _dr4h_read_row_str(char* dst, void* row, char delim)
 			   break;
 			case DR4H_TYPE_BOOL:
 			   advance = sprintf(dst, "%s", (cur_item[1] ? DR4H_STR_TYPE_TRUE : DR4H_STR_TYPE_FALSE));
+			   dst += advance;
+			   break;
+			case DR4H_TYPE_WILD:
+			   advance = sprintf(dst, "%s", DR4H_STR_TYPE_WILD);
 			   dst += advance;
 			   break;
 			default:
