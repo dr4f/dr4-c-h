@@ -15,7 +15,7 @@ static void test_dr4h_row_write_fmt_1(void)
 {
 	const char* fmt_test = "b";
 	unsigned char bytes[100];
-	unsigned worked = _dr4h_row_write_fmt(bytes, fmt_test, 1);
+	unsigned worked = dr4h_row_write_fmt(bytes, fmt_test, 1);
 	void* check_ptr = bytes;
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr) == 15); // size, len, 1 index, 1 bool, stop
 	TEST_FAIL_CHECK(*(uint32_t*)(check_ptr + sizeof(uint32_t)) == 1); // 1 item

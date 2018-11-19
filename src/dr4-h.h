@@ -63,7 +63,8 @@ static const char* DR4H_STR_TYPE_FALSE = "False";
 static const char* DR4H_STR_TYPE_WILD = "*";
 
 /*****************************************/
-
+// File extension string macro.
+#define DR4H_FILE_EXTENSION ".dr4"
 
 /******Pointer Manipulation Macros **********/
 // Macro that evaluates to the size of the current row pointed to.
@@ -136,7 +137,49 @@ __safe_append_bytes(void** data,
 	memcpy((*data) + *len, add, add_size);
 }
 
+/* Function that checks if input ends with the
+ * C-string suf. Mainly used for file path extensions.
+ * NOTE: This is not inclusive. "foo" and "foo" returns 0.
+ */
+static int
+__ends_with_suf(const char* input, const char* suf)
+{
+	size_t input_len = strlen(input);
+	size_t suf_len = strlen(suf);
+	if(suf_len >= input_len) return 0;
+	while(*suf)
+	{
+		if((*input--) != (*suf--)) return 0;
+	}
+    return 1;
+}
+
 /***************************/
+
+/*-------- Row Data Body API -----------*/
+
+static int
+_dr4h_body_data_eq(unsigned char* val1, unsigned char* val2)
+{
+	if(*val1 == DR4H_TYPE_WILD || *val2 == DR4H_TYPE_WILD)
+		return 1;
+	// Different types, not wild
+	if(*val1 != *val2) return 0;
+	else
+	{
+		switch(*val1)
+		{
+			case DR4H_TYPE_STOP:
+			case DR4H_TYPE_NONE: return 1;
+			case DR4H_TYPE_BOOL: return val1[1] == val2[1];
+			default:
+			     fprintf(stderr, "Error: Unknown byte mark '%u' found in _dr4h_body_data_eq\n", *val1);
+			     return 0;
+		}
+	}
+}
+
+/*------------------------------------*/
 
 /**
  * Writes string-based debug information to the FILE
@@ -232,8 +275,8 @@ _dr4h_calc_size_fmt(const char* fmt, uint32_t* length)
  * Returns number of bytes written if success, 0 otherwise
  * NOTE: This function always writes a stop byte at the end of a row.
  */
-static unsigned
-_dr4h_row_write_fmt(void* buf, const char* fmt, ...)
+/*PUBLIC API*/
+unsigned dr4h_row_write_fmt(void* buf, const char* fmt, ...)
 {
 	int grab_int;
 	uint32_t* offsets;
@@ -290,7 +333,7 @@ _dr4h_row_write_fmt(void* buf, const char* fmt, ...)
 	return buf - byte_start;
 }
 // Allows function to be used with public name.
-#define dr4h_write_row_fmt _dr4h_row_write_fmt
+#define dr4h_write_row_fmt dr4h_row_write_fmt
 
 /* Writes the magic byte sequence to beginning of a file.
  * Returns 1 if successful, 0 otherwise.
@@ -407,6 +450,79 @@ _dr4h_count_rows(void* rows, size_t size)
 		}
 	}
 	return count;
+}
+
+/* Compares two rows for equality.
+ * Obeys wildward rules.
+ */
+static int
+_dr4h_row_is_eq(void* row1, void* row2)
+{
+	unsigned char* lfs;
+	unsigned char* rfs;
+	uint32_t row1_len = DR4H_ROWP_LEN(row1);
+	uint32_t row2_len = DR4H_ROWP_LEN(row2);
+	if(row1_len != row2_len) return 0;
+	else
+	{
+		uint32_t i;
+		for(i = 0; i < row1_len; i++)
+		{
+			lfs = DR4H_ROWP_ITEM_AT(row1, i);
+			rfs = DR4H_ROWP_ITEM_AT(row2, i);
+			if(!_dr4h_body_data_eq(lfs, rfs)) return 0;
+		}
+		return 1;
+	}
+}
+// Macro alias for row equality func
+#define dr4h_eq_row _dr4h_row_is_eq
+
+
+
+/* Given a row, finds the amount of times row
+ * appears in rows.
+ * NOTE: respects wild card rule
+ */
+/*PUBLIC API*/
+unsigned dr4h_find_rows(void* rows, void* row, size_t upto)
+{
+	uint32_t cur_row_size;
+	unsigned total = 0;
+	while(upto)
+	{
+		cur_row_size = *(uint32_t*)rows;
+		if(cur_row_size > upto)
+		{
+			fprintf(stderr, "Error: Crossed out of bounds in dr4h_find_rows\n");
+			return 0;
+		}
+		if(_dr4h_row_is_eq(rows, row)) ++total;
+		rows += cur_row_size;
+		upto -= cur_row_size;
+	}
+	return total;
+}
+
+/* Given a row, within 'upto' amount bytes read
+ */
+/*PUBLIC API*/
+void* dr4h_find_row(void* rows, void* row, size_t upto)
+{
+	uint32_t cur_row_size;
+	while(upto)
+	{
+		cur_row_size = *(uint32_t*)rows;
+		if(cur_row_size > upto)
+		{
+			fprintf(stderr, "Error: Crossed out of bounds in dr4h_find_row\n");
+			return NULL;
+		}
+		if(_dr4h_row_is_eq(rows, row)) return row;
+		rows += cur_row_size;
+		upto -= cur_row_size;
+	}
+	return NULL;	
 }
 
 

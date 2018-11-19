@@ -21,6 +21,9 @@ enable_testing()
 add_subdirectory(tests)
 add_subdirectory(examples)
 
+# dr4-h shared lib #
+add_library(Dr4hShared SHARED ${PROJECT_SOURCE_DIR}/src/dr4-h-lib.c)
+
 ## Copies the single header include to the binary dir ##
 file(COPY ${PROJECT_SOURCE_DIR}/src/${dr4-h_header_file} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
