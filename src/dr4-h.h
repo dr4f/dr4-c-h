@@ -356,6 +356,30 @@ _dr4h_read_row(void* dst, void* rows)
 	return bytes_read;
 }
 
+/** ~ File writing function
+ * This function serves as the main file writing function
+ * for dr4-h. It writes a stream of rows
+ */
+/*PUBLIC API*/
+int dr4h_rows_to_file(const char* path, void* rows, size_t upto)
+{
+	FILE* fp;
+	fp = fopen(path, "wb");
+	if(fp == NULL)
+	{
+		fprintf(stderr, "Error: Can not write rows to path at '%s'.\n", path);
+		return 0;
+	}
+	if(!_dr4h_file_write_magic(fp))
+	{
+		fprintf(stderr, "Error: Could not write magic seq to path at '%s'\n", path);
+		return 0;
+	}
+	fwrite(rows, upto, 1, fp);
+	fclose(fp);
+	return 1;
+}
+
 /* Reads multiple rows up until size is 0.
  * If there is an unmet boundary, the function returns 0
  * and does not copy that row.
@@ -478,6 +502,71 @@ _dr4h_row_is_eq(void* row1, void* row2)
 // Macro alias for row equality func
 #define dr4h_eq_row _dr4h_row_is_eq
 
+/* - Item setting function for rows
+ *  Given a row, allows packed data to replace the current data at some
+ *  index in the row.
+ *  Note: This function will stop if the type mark of the packed data is not
+ * the same as the item being re-written. However, no error is printed.
+ * This is done to aloow the function to be used as a conditional.
+ */
+static int
+_dr4h_row_set_item(void* row, void* packed, uint32_t index)
+{
+	// Index out of bounds.
+	if(DR4H_ROWP_LEN(row) < index + 1) return 0;
+	unsigned char* item_change = DR4H_ROWP_ITEM_AT(row, index);
+	unsigned char* new_item = packed;
+	if(*item_change != *new_item) return 0;
+	else
+	{
+		switch(*new_item)
+		{
+			case DR4H_TYPE_NONE:
+			case DR4H_TYPE_WILD:
+			      *item_change++ = *new_item++;
+			      break;
+			case DR4H_TYPE_BOOL:
+			      *item_change++ = *new_item++;
+			      *item_change++ = *new_item++;
+			      break;
+			default: 
+			    // The packed data cannot be identified.
+			    fprintf(stderr, "Error: Found unknown byte in '%u' _d4rh_row_set_item\n", *new_item);
+			    return 0;
+		}
+	}
+
+	return 1;
+}
+
+/* Public facing function that for a stream of rows,
+ *  maps a set item operation for some index in each row
+ *  and some packed item to be written into each row.
+ * 
+ */
+/*PUBLIC API*/
+unsigned dr4h_map_rows(void* rows,
+	                   void* packed,
+	                   uint32_t index,
+	                   size_t upto)
+{
+	uint32_t cur_row_size;
+	unsigned rows_mapped = 0;
+	while(upto)
+	{
+		cur_row_size = *(uint32_t*)rows;
+		if(cur_row_size > upto)
+		{
+			fprintf(stderr, "Error: Crossed out of bounds in dr4h_map_rows\n");
+			return 0;
+		}
+		if(_dr4h_row_set_item(rows, packed, index)) ++rows_mapped;
+		rows += cur_row_size;
+		upto -= cur_row_size;
+	}	
+	return rows_mapped;
+}
+
 
 
 /* Given a row, finds the amount of times row
@@ -518,11 +607,20 @@ void* dr4h_find_row(void* rows, void* row, size_t upto)
 			fprintf(stderr, "Error: Crossed out of bounds in dr4h_find_row\n");
 			return NULL;
 		}
-		if(_dr4h_row_is_eq(rows, row)) return row;
+		if(_dr4h_row_is_eq(rows, row)) return rows;
 		rows += cur_row_size;
 		upto -= cur_row_size;
 	}
 	return NULL;	
+}
+
+/* Extern declared function wrapper over read-to-string
+ * static function
+ */
+/*PUBLIC API*/
+unsigned dr4h_row_to_str(char* dst, void* row, char delim)
+{
+	return _dr4h_read_row_str(dst, row, delim);
 }
 
 

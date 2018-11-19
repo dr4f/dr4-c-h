@@ -27,5 +27,8 @@ add_library(Dr4hShared SHARED ${PROJECT_SOURCE_DIR}/src/dr4-h-lib.c)
 ## Copies the single header include to the binary dir ##
 file(COPY ${PROJECT_SOURCE_DIR}/src/${dr4-h_header_file} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+## Copies the license file to the binary dir ##
+file(COPY ${PROJECT_SOURCE_DIR}/LICENSE.md DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # Writes build version to receipt file.
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/build_receipt.txt "dr4-h Build\n  Version ${dr4-h_version}\n  Built at : ${dr4-h_build_time}\n")

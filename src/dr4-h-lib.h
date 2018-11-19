@@ -15,6 +15,22 @@ extern "C" {
 extern unsigned 
 dr4h_row_write_fmt(void* buf, const char* fmt, ...);
 
+extern unsigned 
+dr4h_find_rows(void* rows, void* row, size_t upto);
+
+
+extern void* 
+dr4h_find_row(void* rows, void* row, size_t upto);
+
+
+extern unsigned 
+dr4h_row_to_str(char* dst, void* row, char delim);
+
+extern unsigned 
+dr4h_map_rows(void* rows,
+	          void* packed,
+	          uint32_t index,
+	          size_t upto);
 
 
 #ifdef __cplusplus
