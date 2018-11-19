@@ -363,6 +363,11 @@ _dr4h_read_row(void* dst, void* rows)
 /*PUBLIC API*/
 int dr4h_rows_to_file(const char* path, void* rows, size_t upto)
 {
+	if(!__ends_with_suf(path, DR4H_FILE_EXTENSION))
+	{
+		fprintf(stderr, "dr4 files must end with extension '%s'\n", DR4H_FILE_EXTENSION);
+		return 0;
+	}
 	FILE* fp;
 	fp = fopen(path, "wb");
 	if(fp == NULL)
@@ -621,6 +626,15 @@ void* dr4h_find_row(void* rows, void* row, size_t upto)
 unsigned dr4h_row_to_str(char* dst, void* row, char delim)
 {
 	return _dr4h_read_row_str(dst, row, delim);
+}
+
+/* Wrapper of internal function that calculates the size of a row,
+ * and stores the length (number of items) in a pointer.
+ */
+/*PUBLIC API*/
+size_t dr4h_size_of_row(const char* fmt, uint32_t* length)
+{
+	return _dr4h_calc_size_fmt(fmt, length);
 }
 
 
