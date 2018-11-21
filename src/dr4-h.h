@@ -387,7 +387,7 @@ _dr4h_read_row(void* dst, void* rows)
  * for dr4-h. It writes a stream of rows
  */
 /*PUBLIC API*/
-int dr4h_rows_to_file(const char* path, void* rows, size_t upto)
+int dr4h_rows_to_file(const char* path, void* rows, size_t upto, int pad_end)
 {
 	if(!__ends_with_suf(path, DR4H_FILE_EXTENSION))
 	{
@@ -407,6 +407,10 @@ int dr4h_rows_to_file(const char* path, void* rows, size_t upto)
 		return 0;
 	}
 	fwrite(rows, upto, 1, fp);
+	if(pad_end)
+	{
+		fwrite(DR4H_FILE_END, sizeof(DR4H_FILE_END), 1, fp);
+	}
 	fclose(fp);
 	return 1;
 }

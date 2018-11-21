@@ -32,7 +32,7 @@ dr4h_map_rows(void* rows,
 	          uint32_t index,
 	          size_t upto);
 extern int 
-dr4h_rows_to_file(const char* path, void* rows, size_t upto);
+dr4h_rows_to_file(const char* path, void* rows, size_t upto, int pad_end);
 
 extern size_t 
 dr4h_size_of_row(const char* fmt, uint32_t* length);
