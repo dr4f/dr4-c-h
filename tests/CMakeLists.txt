@@ -11,3 +11,6 @@ add_test(test_read test_read)
 
 add_executable(test_find test_find.c)
 add_test(test_find test_find)
+
+add_executable(test_si32 test_si32.c)
+add_test(test_si32 test_si32)

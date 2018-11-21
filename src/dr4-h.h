@@ -24,6 +24,7 @@ extern "C" {
 #define DR4H_TYPE_NONE 1
 #define DR4H_TYPE_BOOL 2
 #define DR4H_TYPE_WILD 3
+#define DR4H_TYPE_SI32 4 /*signed - 32 bit integer */
 
 /***********************/
 
@@ -63,6 +64,16 @@ static const char* DR4H_STR_TYPE_FALSE = "False";
 static const char* DR4H_STR_TYPE_WILD = "*";
 
 /*****************************************/
+/*********Dynamic String Representing ******/
+// Writes a si32 val to a string, returns the number of characters written.
+static inline size_t
+_dr4h_si32_to_str(char* dst, unsigned char* data)
+{
+	assert(*data == DR4H_TYPE_SI32);
+	return sprintf(dst, "%d", *(uint32_t*)(data + 1));
+}
+
+/**********************************************/
 // File extension string macro.
 #define DR4H_FILE_EXTENSION ".dr4"
 
@@ -172,6 +183,7 @@ _dr4h_body_data_eq(unsigned char* val1, unsigned char* val2)
 			case DR4H_TYPE_STOP:
 			case DR4H_TYPE_NONE: return 1;
 			case DR4H_TYPE_BOOL: return val1[1] == val2[1];
+			case DR4H_TYPE_SI32: return (*(int32_t*)(val1 + 1)) == (*(int32_t*)(val2 + 1));
 			default:
 			     fprintf(stderr, "Error: Unknown byte mark '%u' found in _dr4h_body_data_eq\n", *val1);
 			     return 0;
@@ -214,6 +226,9 @@ _dr4h_row_debug_info(FILE* fp, void* row)
 			case DR4H_TYPE_WILD:
 			     fprintf(fp, "WildCard - %s\n", DR4H_STR_TYPE_WILD);
 			     break;
+			case DR4H_TYPE_SI32:
+			     fprintf(fp, "S 32-bit Integer, - Data: %d\n", *(int32_t*)(cur_item + 1));
+			     break;
 			default:
 			     fprintf(fp, "Unknown, - Mark %u, - Data: %u\n", cur_item[0], cur_item[1]);
 		}
@@ -229,7 +244,9 @@ _dr4h_row_debug_info(FILE* fp, void* row)
  * All rows have a header that needs at least 12 bytes of memory, followed by aa data body.
  * The code for this format string is as follows
  * - n a None type
- * -b a Bool type
+ * - b a Bool type
+ * - * a wild card type
+ * - i a signed 32-bit int type.
  * Note: + 1 is always added for the stop byte
  * Note: For every field in the row, 4 is added to the total size
  *       to account for one additional index slot.
@@ -250,6 +267,9 @@ _dr4h_calc_size_fmt(const char* fmt, uint32_t* length)
 			   break;
 			case 'b':
 			   total += 2;
+			   break;
+			case 'i':
+			   total += sizeof(int32_t) + 1;
 			   break;
 			default:
 			   fprintf(stderr, "Error: Unrecognized fmt char '%c' in _dr4h_calc_size\n", *fmt);
@@ -320,6 +340,12 @@ unsigned dr4h_row_write_fmt(void* buf, const char* fmt, ...)
     		    *(unsigned char*)(buf++) = DR4H_TYPE_BOOL;
     		    grab_int = va_arg(fmt_arg_lst, int);
     		    *(unsigned char*)(buf++) = grab_int;
+    		    break;
+    		case 'i':
+    		    *(unsigned char*)(buf++) = DR4H_TYPE_SI32;
+    		    grab_int = va_arg(fmt_arg_lst, int);
+    		    *(int32_t*)(buf) = grab_int;
+    		    buf += sizeof(int32_t);
     		    break;
     		default:
 			   fprintf(stderr, "Error: Unrecognized fmt char '%c' in _dr4h_row_write_fmt\n", *fmt);
@@ -441,6 +467,10 @@ _dr4h_read_row_str(char* dst, void* row, char delim)
 			   advance = sprintf(dst, "%s", DR4H_STR_TYPE_WILD);
 			   dst += advance;
 			   break;
+			case DR4H_TYPE_SI32:
+			   advance = _dr4h_si32_to_str(dst, cur_item);
+			   dst += advance;
+			   break;
 			default:
 			   fprintf(stderr, "Error: Unknown type byte '%u' in _dr4h_read_row_str\n", *cur_item);
 			   return 0;
@@ -533,6 +563,14 @@ _dr4h_row_set_item(void* row, void* packed, uint32_t index)
 			case DR4H_TYPE_BOOL:
 			      *item_change++ = *new_item++;
 			      *item_change++ = *new_item++;
+			      break;
+			case DR4H_TYPE_SI32:
+			// Five byte copies, 4 for the i32, one for the type.
+			      *item_change++ = *new_item++;
+			      *item_change++ = *new_item++;
+			      *item_change++ = *new_item++;
+			      *item_change++ = *new_item++;
+			      *item_change++ = *new_item++;		
 			      break;
 			default: 
 			    // The packed data cannot be identified.
