@@ -1,5 +1,9 @@
 # dr4-h
 
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/jweinst1/dr4-h/blob/master/LICENSE.md)
+![language button](https://img.shields.io/badge/Language-C-orange.svg)
+![build button](https://img.shields.io/badge/Build-passing-green.svg)
+
 *A binary, typed, data storage file format*
 
 ## Building
