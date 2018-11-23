@@ -46,3 +46,7 @@ To the file foo.dr4
 After row appending, file size is now 174
 -----Finished Appending Rows to File Example-------
 ```
+
+After building, a copy of the single file header, `dr4-h.h`, is copied to the binary directory. It has a copy of the license in the comments and all the code you need to use the library, so you can just include it and start using the functions, like in the example.
+
+Alternatively, you can use the library linkable header, `dr4-h-lib.h`, and link in the static or shared libraries built.
