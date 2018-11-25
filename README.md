@@ -1,4 +1,4 @@
-# dr4-h
+# dr4-h-c
 
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/jweinst1/dr4-h/blob/master/LICENSE.md)
 ![language button](https://img.shields.io/badge/Language-C-orange.svg)
