@@ -393,6 +393,20 @@ _dr4h_file_write_magic(FILE* fp)
 	return 3 == fwrite(DR4H_MAGIC, 1, 3, fp);
 }
 
+/* Writes the full dr4 header.
+ * This will write, at the start of the file,
+ * - The magic sequence,
+ * - 3 bytes to represent the version,
+ * - 2 bytes that are reserved for future use.
+ */
+static inline int
+_dr4h_file_write_header(FILE* fp, unsigned char* version)
+{
+	unsigned char w_buf[] = { 83, 94, 121, version[0], version[1], version[2], 0, 0};
+	rewind(fp);
+	return 8 == fwrite(w_buf, sizeof(w_buf), 1, fp);
+}
+
 /* Fast function that reads one row from rows
  * and returns the number of bytes read.
  */
