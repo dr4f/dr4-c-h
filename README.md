@@ -6,6 +6,10 @@
 
 *A binary, typed, data storage file format*
 
+## Version
+
+This library adheres to the `0.0.0` version of the `dr4` format. It is a non-standard format that later versions are not backward compatible with.
+
 ## Building
 
 To build `dr4-h` examples and test files, run the following commands in your terminal
